@@ -7,10 +7,14 @@ import {
 } from './style';
 import Loading from '../../loading/index';
 import { renderRoutes } from 'react-router-config';
+import io from 'socket.io-client';
 function Tube (props){
     const { route } = props;
     const { enterLoading, tubeRoomList } = props;
     const { getTubeRoomListDataDispatch } = props;
+    const socket = io.connect('https://localhost:443');
+    socket.connect();
+    socket.emit('join','1111');
     let roomList = [
       {
         id:1,
