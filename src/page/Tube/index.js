@@ -12,15 +12,15 @@ function Tube (props){
     const { route } = props;
     const { enterLoading, tubeRoomList } = props;
     const { getTubeRoomListDataDispatch } = props;
-    const socket = io.connect('https://localhost:443');
-    socket.connect();
-    socket.emit('join','1111');
     let roomList = [
       {
         id:1,
         name: "aaa",
       },
     ]
+    const socket = io('wss://localhost:443');
+    console.log(socket.id);
+    socket.emit('join','1111');
     useEffect (() => {
         getTubeRoomListDataDispatch ();
     }, []);

@@ -7,6 +7,7 @@ const noopServiceWorkerMiddleware = require('react-dev-utils/noopServiceWorkerMi
 const ignoredFiles = require('react-dev-utils/ignoredFiles');
 const redirectServedPath = require('react-dev-utils/redirectServedPathMiddleware');
 const paths = require('./paths');
+const path = require('path')
 const getHttpsConfig = require('./getHttpsConfig');
 
 const host = process.env.HOST || '0.0.0.0';
@@ -90,7 +91,11 @@ module.exports = function (proxy, allowedHost) {
     watchOptions: {
       ignored: ignoredFiles(paths.appSrc),
     },
-    https: getHttpsConfig(),
+    //https: getHttpsConfig(),
+    https: {
+      key: fs.readFileSync(path.join(__dirname, './cert/privatekey.pem')),
+      cert: fs.readFileSync(path.join(__dirname, './cert/certificate.pem'))
+    },
     host,
     overlay: false,
     historyApiFallback: {
