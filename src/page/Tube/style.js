@@ -9,5 +9,5 @@ export const Card = styled.div`
     height: 100px;
     margin-top: 50px;
     width: 100%;
-    background-color: blue;
+    background-color: yellow;
 `

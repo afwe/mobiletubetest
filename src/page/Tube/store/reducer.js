@@ -7,7 +7,7 @@ const defaultState = fromJS ({
 export default (state = defaultState, action) => {
     switch (action.type) {
         case actionTypes.CHANGE_ROOMS:
-            return state.set ('rooms', action.data);
+            return state.set ('tubeRooms', action.data);
         case actionTypes.CHANGE_ENTER_LOADING:
             return state.set('enterLoading', action.data);
         default:

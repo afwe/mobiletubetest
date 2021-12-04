@@ -1,10 +1,13 @@
 import axios from 'axios';
-export const baseUrl = "http://localhost:80";
+export const baseUrl = "https://localhost:3000";
 const axiosInstance = axios.create({
     baseUrl: baseUrl
 });
 axiosInstance.interceptors.response.use(
-    response => response.data,
+    response => {
+        console.log(response.data);
+        return response.data;
+    },
     error => {
         console.log(error, "网络错误");
     }

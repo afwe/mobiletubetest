@@ -16,7 +16,7 @@ export const getTubeRoomList = () => {
     return (dispatch) => {
         getTubeRooms()
         .then(data => {
-            dispatch (changeRoomList (data.rooms));
+            dispatch (changeRoomList (data));
             dispatch (changeEnterLoading (false));
         })
         .catch(()=>{

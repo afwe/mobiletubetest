@@ -1,27 +1,60 @@
-import React,{ useState, useEffect  } from 'react';
+import React,{ useState, useEffect, componentDidMount, componentWillUnmount } from 'react';
 import {
     Container,
-    RemoteVideo
 } from './style';
 import { CSSTransition } from 'react-transition-group';
 import Head from '../../header/index';
-function TubeRoom (props){
-    console.log("???");
-    let roomId;
-    const [showStatus, setShowStatus] = useState (true);
-    const handleErr = function(err){
+import io from 'socket.io-client';
+class TubeRoom extends React.Component{
+    constructor(props){
+        super(props);
+        this.roomId = '';
+        this.showStatus = true;
+        this.socket = {};
+        this.pc = null;
+        this.localStream = {};
+        this.peerConnectionCollection = [];
+        this.state = 'slave';
+        this.localVideo = {};
+        this.localStream = {};
+        this.pcConfig = {
+            iceServers:[
+                {
+                    urls: ["stun:afweshuaige.ltd:3478"]
+                },
+                {
+                    urls: ['turn:afweshuaige.ltd:3478?transport=udp'],
+                    credential: '1234',
+                    username: 'afwe',
+                }
+            ],
+        };
+        this.domCollection = {};
+        this.startX = 0;
+        this.endX = 0;        
+        this.roomId = props.location.pathname.substr(6,props.location.pathname.length-1);
+    }
+    componentDidMount(){
+        this.socket = io('wss://175.27.138.160');
+        this.localVideo = document.querySelector('video');
+        this.connectSignalServer();
+    }
+    componentWillUnmount(){
+        this.disconnectSignalServer();
+    }
+    handleErr(err){
         console.error(err);
     }
-    const sendMessage = function(id,data){
+    sendMessage(id,data){
         if(this.socket){
             this.socket.emit('message',id,data);
         }
     }
-    const getOffer = function(desc,masterId){
+    getOffer(desc,masterId){
         this.pc.setLocalDescription(desc);
         this.sendMessage(masterId,desc);
     }
-    const call = function(masterId){
+    call(masterId){
         if(this.pc){
             console.log('pcsurvive');
             let options = {
@@ -30,6 +63,7 @@ function TubeRoom (props){
             }
             if(this.state == 'slave'){
                 console.log('offercall');
+                console.log(this.pc);
                 this.pc.createOffer(options)
                 .then((desc)=>{
                     this.getOffer(desc,masterId);
@@ -39,23 +73,19 @@ function TubeRoom (props){
         }
     }
 
-    const getMediaStream = function(stream){
-        this.localStream = stream;
-        this.localVideo.srcObject = this.localStream;
-    }
-    const masterGetOffer = function(id,message){
+    masterGetOffer(id,message){
         console.log(id);
         this.peerConnectionCollection[id].setRemoteDescription(new RTCSessionDescription(message));
         this.peerConnectionCollection[id].createAnswer().then((answer)=>{this.getAnswer(answer,id)}).catch(this.handleErr);
     }
-    const masterAddCandidate = function(id,candidate){
+    masterAddCandidate(id,candidate){
         this.peerConnectionCollection[id].addIceCandidate(candidate).catch();
     }
-    const getAnswer = function(desc,id){
+    getAnswer(desc,id){
         this.peerConnectionCollection[id].setLocalDescription(desc);
         this.sendMessage(id,desc);
     }
-    const initSocketIO = function(){
+    initSocketIO(){
         this.socket.on('newSlave',(id)=>{
             this.masterCreatePeerConnection(id);
         })
@@ -89,7 +119,7 @@ function TubeRoom (props){
 
         this.socket.on('leave',(roomId, id)=>{
             this.socket.disconnected();
-            closePeerConnection();
+            this.closePeerConnection();
             this.closeLocal();
             console.log('leave');
         })
@@ -97,7 +127,7 @@ function TubeRoom (props){
         this.socket.emit('join',this.roomId);
         return;
     }
-    const slaveCreatePeerConnection = function(){
+    slaveCreatePeerConnection(){
         if(!this.pc){
             this.pc = new RTCPeerConnection(this.pcConfig);
             this.pc.onicecandidate = (e)=> {
@@ -128,14 +158,14 @@ function TubeRoom (props){
                             sdpMLineIndex: message.label,
                             candidate: message.candidate
                         })
-                        this.pc.addIceCandidate(candidate).catch();
+                        this.pc.addIceCandidate(candidate).catch(this.handleErr);
                     }
                 }
             })
         }
     }
 
-    const masterCreatePeerConnection = function(slaveId){
+    masterCreatePeerConnection(slaveId){
         console.log(slaveId);
         this.peerConnectionCollection[slaveId] = new RTCPeerConnection(this.pcConfig);
         this.pc = this.peerConnectionCollection[slaveId];
@@ -158,7 +188,7 @@ function TubeRoom (props){
         this.socket.emit('slaveStart',slaveId);
     }
 
-    const closePeerConnection = function(){
+    closePeerConnection(){
         if(this.pc){
             this.pc.close();
             this.pc=null;
@@ -166,7 +196,7 @@ function TubeRoom (props){
     }
 
 
-    const closeLocal = function(){
+    closeLocal(){
         if(this.localStream&&this.localStream.getTracks()){
             this.localStream.getTracks().forEach((track)=>{
                 track.stop();
@@ -175,15 +205,15 @@ function TubeRoom (props){
         }
     }
 
-    const connectSignalServer = function(){
+    connectSignalServer(){
         this.initSocketIO();
     }
-    const disconnectSignalServer = function(){
+    disconnectSignalServer(){
         if(this.socket){
             this.socket.emit('leave',this.roomId);
         }
     }
-    const start = function(){
+    start(){
         if(this.state=='master'){
             if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
                 console.error("请使用新版浏览器");
@@ -195,51 +225,52 @@ function TubeRoom (props){
                         echoCancellation: true
                     }
                 }
-                navigator.mediaDevices.getUserMedia(constraints).then(this.getMediaStream).catch(this.handleErr);
+                let self = this;
+                navigator.mediaDevices.getUserMedia(constraints).then((stream)=>{
+                    self.localStream = stream;
+                    self.localVideo.srcObject = self.localStream;
+                }).catch(this.handleErr);
             }
         } else if(this.state=='slave'){
             this.slaveCreatePeerConnection();
             this.socket.emit('ready',this.roomId);
         }
     }
-    useEffect (()=>{
-        let queryStr = props.location.search;
-        roomId = queryStr.substr(queryStr.indexOf("=")+1, queryStr.length);
-    },[])
-    const handleBack = ()=>{
-        setShowStatus (false);
+    handleBack = ()=>{
+        this.showStatus = false;
     }
-    let startX,endX;
-    const handleTouchStart = (e)=>{
+    handleTouchStart = (e)=>{
         console.log("TOUCH");
-        startX = e.touches[0].clientX;
+        this.startX = e.touches[0].clientX;
     }
-    const handleTouchMove = (e)=>{
-        endX = e.touches[0].clientX;
+    handleTouchMove = (e)=>{
+        this.endX = e.touches[0].clientX;
     }
-    const handleTouchEnd = (e)=>{
-        console.log(endX - startX);
-        if(endX - startX > 120) {
-            setShowStatus (false);
+    handleTouchEnd = (e)=>{
+        console.log(this.endX - this.startX);
+        if(this.endX - this.startX > 120) {
+            this.showStatus = false;
         }
+    } 
+    render(){
+        return(
+            <CSSTransition
+                in={this.showStatus}  
+                timeout={300} 
+                classNames="fly" 
+                appear={true} 
+                unmountOnExit
+                onExited={this.props.history.goBack}
+                onTouchStart={this.handleTouchStart} onTouchMove ={this.handleTouchMove} onTouchEnd={this.handleTouchEnd}
+            >
+                <Container>
+                    <div>观看直播</div>
+                    <video autoPlay playsInline>
+                    </video>
+                </Container>
+            </CSSTransition>
+        )
     }
-    return(
-        <CSSTransition
-            in={showStatus}  
-            timeout={300} 
-            classNames="fly" 
-            appear={true} 
-            unmountOnExit
-            onExited={props.history.goBack}
-            onTouchStart={handleTouchStart} onTouchMove ={handleTouchMove} onTouchEnd={handleTouchEnd}
-        >
-            <Container>
-                <div>观看直播</div>
-                <RemoteVideo>
-                </RemoteVideo>
-            </Container>
-        </CSSTransition>
-    )
 }
 
 export default React.memo(TubeRoom);

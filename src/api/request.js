@@ -1,5 +1,5 @@
 import { axiosInstance } from './config'
 
 export const getTubeRooms = () => {
-    return axiosInstance.get('./getRooms');
+    return axiosInstance.get('api/getRooms');
 }

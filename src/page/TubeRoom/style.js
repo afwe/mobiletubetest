@@ -1,10 +1,5 @@
 import styled from 'styled-components';
 import style from '../../assets/global-style';
-
-export const RemoteVideo = styled.video`
-    width: 100%;
-    height: 500px;
-`
 export const Container = styled.div`
   height: 500px;
   width: 100%;
@@ -29,5 +24,9 @@ export const Container = styled.div`
   &.fly-exit-active {
     transition: transform .3s;
     transform: rotateZ(30deg) translate3d(100%, 0, 0);
+  }
+  >video {
+    width: 100%;
+    height: 500px;
   }
 `
